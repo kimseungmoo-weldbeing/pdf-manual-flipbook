@@ -56,13 +56,16 @@ body {
   box-sizing: border-box;
 }
 
-.stf__parent canvas {
+.stf__parent canvas,
+.stf__canvas {
   position: absolute;
   width: 100%;
   height: 100%;
   left: 0;
   top: 0;
-  background-color: transparent;
+  display: block;
+  background-color: #ffffff;
+  border-radius: 4px;
 }
 
 .stf__block {

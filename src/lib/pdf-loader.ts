@@ -1,4 +1,4 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // Use local worker script served from public/pdfjs
 if (typeof window !== 'undefined') {
@@ -24,11 +24,27 @@ export async function loadAndRenderPdf(
   onProgress?: (loaded: number, total: number) => void,
   renderScale: number = 2.0
 ): Promise<PdfDocumentInfo> {
+  if (typeof window !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
+  }
+
+  console.log('[pdf-loader] Starting getDocument with source type:', typeof source);
   const loadingTask = pdfjsLib.getDocument(
-    typeof source === 'string' ? source : { data: source }
+    typeof source === 'string'
+      ? {
+          url: source,
+          cMapUrl: 'https://unpkg.com/pdfjs-dist@4.10.38/cmaps/',
+          cMapPacked: true,
+        }
+      : {
+          data: source instanceof ArrayBuffer ? new Uint8Array(source) : source,
+          cMapUrl: 'https://unpkg.com/pdfjs-dist@4.10.38/cmaps/',
+          cMapPacked: true,
+        }
   );
 
   const pdfDoc = await loadingTask.promise;
+  console.log('[pdf-loader] PDF loaded, numPages:', pdfDoc.numPages);
   const numPages = pdfDoc.numPages;
   const pages: RenderedPdfPage[] = [];
 
@@ -65,7 +81,7 @@ export async function loadAndRenderPdf(
       intent: 'display',
     }).promise;
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
     pages.push({
       pageNumber: pageNum,
@@ -74,6 +90,8 @@ export async function loadAndRenderPdf(
       height: viewport.height,
       aspectRatio: viewport.width / viewport.height,
     });
+
+    console.log(`[pdf-loader] Rendered page ${pageNum}/${numPages}`);
 
     if (onProgress) {
       onProgress(pageNum, numPages);

@@ -30,6 +30,8 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
   const bookElementRef = useRef<HTMLDivElement>(null);
   const pageFlipInstanceRef = useRef<PageFlip | null>(null);
 
+  const flipBookRef = useRef<FlipBookHandle>(null);
+
   useImperativeHandle(ref, () => ({
     pageFlip: () => pageFlipInstanceRef.current,
     flipNext: () => {
@@ -74,18 +76,21 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
     const pageFlip = new PageFlip(bookElementRef.current, {
       width,
       height,
-      size: 'fixed',
+      size: 'stretch',
       minWidth: 320,
       maxWidth: 1000,
       minHeight: 450,
       maxHeight: 1400,
       maxShadowOpacity: 0.5,
       showCover: true,
+      autoSize: true,
       mobileScrollSupport: false,
       usePortrait: singlePageMode,
       flippingTime: 700,
       drawShadow: true,
       useMouseEvents: true,
+      showPageCorners: true,
+      disableFlipByClick: false,
     });
 
     pageFlipInstanceRef.current = pageFlip;
@@ -116,7 +121,31 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
 
     Promise.all(preloadPromises).then(() => {
       if (isCancelled || !bookElementRef.current) return;
+      console.log('[FlipBook] Loading pages into PageFlip, count:', pages.length);
       pageFlip.loadFromImages(pages);
+      console.log('[FlipBook] loadFromImages complete');
+      // Ensure canvas draws immediately
+      requestAnimationFrame(() => {
+        try {
+          pageFlip.update();
+        } catch {
+          // ignore
+        }
+      });
+      setTimeout(() => {
+        try {
+          pageFlip.update();
+        } catch {
+          // ignore
+        }
+      }, 50);
+      setTimeout(() => {
+        try {
+          pageFlip.update();
+        } catch {
+          // ignore
+        }
+      }, 200);
     });
 
     return () => {
@@ -135,12 +164,22 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
   return (
     <div
       ref={containerRef}
-      className="flipbook-container flex items-center justify-center w-full h-full p-2 select-none overflow-hidden"
+      className="flipbook-container flex items-center justify-center w-full h-full p-2 select-none overflow-hidden relative"
+      onClick={(e) => {
+        // Fallback click on left/right half to turn pages if click wasn't consumed
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        if (clickX < rect.width / 2) {
+          pageFlipInstanceRef.current?.flipPrev();
+        } else {
+          pageFlipInstanceRef.current?.flipNext();
+        }
+      }}
     >
       <div
         ref={bookElementRef}
-        className="flip-book shadow-2xl rounded-sm mx-auto"
-        style={{ width: `${width * 2}px`, maxWidth: '100%', height: `${height}px` }}
+        className="flip-book shadow-2xl rounded-sm mx-auto cursor-pointer"
       />
     </div>
   );

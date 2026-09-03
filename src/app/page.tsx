@@ -46,10 +46,10 @@ export default function FlipBookViewerPage() {
       setPages(pageUrls);
       setDocumentTitle(result.title || title);
       setCurrentPage(0);
+      setIsLoading(false);
     } catch (err) {
       console.error('Failed to load PDF:', err);
       setErrorMessage('PDF 파일을 읽어 렌더링하는 중 오류가 발생했습니다.');
-    } finally {
       setIsLoading(false);
     }
   }, []);
@@ -201,16 +201,18 @@ export default function FlipBookViewerPage() {
             className="w-full h-full flex items-center justify-center transition-transform duration-200 ease-out origin-center"
             style={{ transform: `scale(${zoom})` }}
           >
-            <FlipBook
-              ref={flipBookRef}
-              pages={pages}
-              width={480}
-              height={680}
-              singlePageMode={singlePageMode}
-              onPageChange={(newPageIndex) => {
-                setCurrentPage(newPageIndex);
-              }}
-            />
+            {pages.length > 0 && (
+              <FlipBook
+                ref={flipBookRef}
+                pages={pages}
+                width={480}
+                height={680}
+                singlePageMode={singlePageMode}
+                onPageChange={(newPageIndex) => {
+                  setCurrentPage(newPageIndex);
+                }}
+              />
+            )}
           </div>
         )}
 
