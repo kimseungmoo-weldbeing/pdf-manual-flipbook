@@ -204,8 +204,8 @@ export default function FlipBookViewerPage() {
             <FlipBook
               ref={flipBookRef}
               pages={pages}
-              width={520}
-              height={730}
+              width={480}
+              height={680}
               singlePageMode={singlePageMode}
               onPageChange={(newPageIndex) => {
                 setCurrentPage(newPageIndex);
