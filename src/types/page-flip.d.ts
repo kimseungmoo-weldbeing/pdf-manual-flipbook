@@ -1,5 +1,6 @@
 declare module 'page-flip' {
   export interface PageFlipOptions {
+    startPage?: number;
     width: number;
     height: number;
     size?: 'fixed' | 'stretch';

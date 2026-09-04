@@ -27,27 +27,32 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const bookElementRef = useRef<HTMLDivElement>(null);
   const pageFlipInstanceRef = useRef<PageFlip | null>(null);
+  const bookHostRef = useRef<HTMLDivElement | null>(null);
 
-  const flipBookRef = useRef<FlipBookHandle>(null);
+  const onPageChangeRef = useRef(onPageChange);
+  const onInitRef = useRef(onInit);
+  const currentPageRef = useRef(0);
+  const prevPagesRef = useRef(pages);
+
+  onPageChangeRef.current = onPageChange;
+  onInitRef.current = onInit;
+
+  if (prevPagesRef.current !== pages) {
+    currentPageRef.current = 0;
+    prevPagesRef.current = pages;
+  }
 
   useImperativeHandle(ref, () => ({
     pageFlip: () => pageFlipInstanceRef.current,
     flipNext: () => {
-      if (pageFlipInstanceRef.current) {
-        pageFlipInstanceRef.current.flipNext();
-      }
+      pageFlipInstanceRef.current?.flipNext();
     },
     flipPrev: () => {
-      if (pageFlipInstanceRef.current) {
-        pageFlipInstanceRef.current.flipPrev();
-      }
+      pageFlipInstanceRef.current?.flipPrev();
     },
     flipToPage: (pageIndex: number) => {
-      if (pageFlipInstanceRef.current) {
-        pageFlipInstanceRef.current.flip(pageIndex);
-      }
+      pageFlipInstanceRef.current?.flip(pageIndex);
     },
     getCurrentPage: () => {
       return pageFlipInstanceRef.current ? pageFlipInstanceRef.current.getCurrentPageIndex() : 0;
@@ -58,9 +63,8 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
   }));
 
   useEffect(() => {
-    if (!bookElementRef.current || pages.length === 0) return;
+    if (!containerRef.current || pages.length === 0) return;
 
-    // Clean up previous instance
     if (pageFlipInstanceRef.current) {
       try {
         pageFlipInstanceRef.current.destroy();
@@ -70,10 +74,14 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
       pageFlipInstanceRef.current = null;
     }
 
-    // Reset container HTML
-    bookElementRef.current.innerHTML = '';
+    bookHostRef.current = null;
 
-    const pageFlip = new PageFlip(bookElementRef.current, {
+    const bookElement = document.createElement('div');
+    bookElement.className = 'flip-book shadow-2xl rounded-sm mx-auto cursor-pointer';
+    containerRef.current.appendChild(bookElement);
+    bookHostRef.current = bookElement;
+
+    const pageFlip = new PageFlip(bookElement, {
       width,
       height,
       size: 'stretch',
@@ -91,24 +99,21 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
       useMouseEvents: true,
       showPageCorners: true,
       disableFlipByClick: false,
+      startPage: currentPageRef.current,
     });
 
     pageFlipInstanceRef.current = pageFlip;
 
     pageFlip.on('flip', (e: { data: number }) => {
+      currentPageRef.current = e.data;
       soundEffects.playFlip();
-      if (onPageChange) {
-        onPageChange(e.data);
-      }
+      onPageChangeRef.current?.(e.data);
     });
 
     pageFlip.on('init', () => {
-      if (onInit) {
-        onInit(pages.length);
-      }
+      onInitRef.current?.(pages.length);
     });
 
-    // Preload all page images before loading into PageFlip
     let isCancelled = false;
     const preloadPromises = pages.map((src) => {
       return new Promise<void>((resolve) => {
@@ -120,11 +125,10 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
     });
 
     Promise.all(preloadPromises).then(() => {
-      if (isCancelled || !bookElementRef.current) return;
+      if (isCancelled || !bookHostRef.current) return;
       console.log('[FlipBook] Loading pages into PageFlip, count:', pages.length);
       pageFlip.loadFromImages(pages);
       console.log('[FlipBook] loadFromImages complete');
-      // Ensure canvas draws immediately
       requestAnimationFrame(() => {
         try {
           pageFlip.update();
@@ -158,15 +162,16 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
         }
         pageFlipInstanceRef.current = null;
       }
+      bookHostRef.current = null;
     };
-  }, [pages, width, height, singlePageMode, onPageChange, onInit]);
+  }, [pages, width, height, singlePageMode]);
 
   return (
     <div
       ref={containerRef}
       className="flipbook-container flex items-center justify-center w-full h-full p-2 select-none overflow-hidden relative"
       onClick={(e) => {
-        // Fallback click on left/right half to turn pages if click wasn't consumed
+        if (e.target !== containerRef.current) return;
         if (!containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
@@ -176,11 +181,6 @@ export const FlipBook = forwardRef<FlipBookHandle, FlipBookProps>(function FlipB
           pageFlipInstanceRef.current?.flipNext();
         }
       }}
-    >
-      <div
-        ref={bookElementRef}
-        className="flip-book shadow-2xl rounded-sm mx-auto cursor-pointer"
-      />
-    </div>
+    />
   );
 });
