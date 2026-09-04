@@ -18,6 +18,7 @@
    - 사이드 썸네일 목차 서랍 및 로컬 PDF 파일 드래그앤드롭 업로드 모달 제공
 6. **데모 매뉴얼 제공 (`scripts/generate-sample-pdf.mjs`, `public/sample-manual.pdf`)**:
    - 총 10페이지 분량의 스마트 디바이스 사용자 매뉴얼 PDF 기본 탑재
-7. **Git 계정 설정**:
-   - `kimseungmoo-weldbeing` 계정으로 로컬 git 작성자 설정 적용
+7. **Git 계정 설정 및 GitHub 저장소 배포**:
+   - `kimseungmoo-weldbeing` 계정으로 GitHub 저장소 생성 및 푸시 완료: https://github.com/kimseungmoo-weldbeing/pdf-manual-flipbook
+
 
